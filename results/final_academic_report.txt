@@ -12,6 +12,11 @@ superior pattern recognition across combined time-frequency (FFT) domains. Howev
 deploying floating-point 32-bit (FP32) neural networks to edge hardware (FPGAs) introduces
 prohibitive hardware costs in DSP slice count, memory bandwidth, and power consumption.
 
+This report documents the experimental results obtained from training and evaluating
+the 1D-CNN architecture on 100,000 real AC current samples (8,000 Hz, 160-point window).
+We contrast the 32-bit floating point baseline against Post-Training Quantization (PTQ)
+and Quantization-Aware Training (QAT) targeted at Xilinx Artix-7 / Zynq-7000 FPGAs.
+
 2. COMPLETE HYPERPARAMETER SPECIFICATIONS & SYSTEM CONFIGURATION
 ----------------------------------------------------------------------------------------
 [A] Input & Signal Preprocessing Parameters:
@@ -48,7 +53,7 @@ prohibitive hardware costs in DSP slice count, memory bandwidth, and power consu
   - Loss Objective Function:        Binary Cross-Entropy Loss (BCELoss)
   - Learning Rate Scheduler:        ReduceLROnPlateau (factor=0.5, patience=2, mode='min')
   - Dropout Probability:            0.20 (20% regularized deactivation)
-  - Best Checkpoint Criterion:      Validation F1-Score
+  - Best Checkpoint Criterion:      Validation F1-Score (Achieved: 0.8434 at Epoch 4)
 
 [E] Quantization-Aware Training (QAT) Hyperparameters:
   - Target Bit-Width Precision:     8-bit Signed Integer (INT8)
@@ -60,6 +65,7 @@ prohibitive hardware costs in DSP slice count, memory bandwidth, and power consu
   - QAT Weight Decay:               1e-05
   - QAT Training Epochs:            5
   - QAT Learning Rate Scheduler:    CosineAnnealingLR (T_max=5)
+  - Best QAT Checkpoint Criterion:  Validation F1-Score (Achieved: 0.8634 at Epoch 5)
 
 [F] Target Hardware & Deployment Environment:
   - Target FPGA Chip:               Xilinx Artix-7 (XC7A100T-1CSG324C) / Zynq-7000
@@ -79,21 +85,37 @@ prohibitive hardware costs in DSP slice count, memory bandwidth, and power consu
   adapts the network weights to overcome quantization noise, fully recovering baseline accuracy
   while operating with an 8-bit integer budget.
 
-4. PERFORMANCE AND ACCURACY COMPARISON
+4. PERFORMANCE AND ACCURACY COMPARISON (ACTUAL EXPERIMENTAL TEST RESULTS)
 ----------------------------------------------------------------------------------------
+Evaluated on 15,000 unseen test samples (7,500 Normal, 7,500 Arc Fault):
+
           Model  Accuracy (%)  F1-Score  Precision   Recall  False Alarm Rate (%)   ROC-AUC  Model Size (KB)  Latency (ms)
-Legacy Baseline         88.42    0.8791     0.8912   0.8674                  9.85    0.9412             82.5        0.0125
-  FP32 Baseline         98.76    0.9875     0.9890   0.9860                  1.08    0.9984             94.8        0.0142
-     PTQ (INT8)         93.20    0.9304     0.9421   0.9190                  5.42    0.9781             23.7        0.0098
-     QAT (INT8)         98.54    0.9853     0.9872   0.9835                  1.21    0.9980             23.7        0.0098
+Legacy Baseline        50.00%    0.0000     0.0000   0.0000                 0.00%    0.4629            82.50        0.1674
+  FP32 Baseline        85.90%    0.8417     0.9595   0.7496                 3.16%    0.9462            94.80        0.1240
+     PTQ (INT8)        70.73%    0.5989     0.9512   0.4371                 2.24%    0.8623            23.70        0.1155
+     QAT (INT8)        86.51%    0.8662     0.8595   0.8729                14.27%    0.9426            23.70        0.1650
+
+CONFUSION MATRIX BREAKDOWN (Test Set = 15,000 samples):
+----------------------------------------------------------------------------------------
+- Legacy Baseline:  TN = 7500 | FP =    0 | FN = 7500 | TP =    0  (Total failure: zero arc detection)
+- FP32 Baseline:    TN = 7263 | FP =  237 | FN = 1878 | TP = 5622  (High precision, moderate recall)
+- PTQ (INT8):       TN = 7332 | FP =  168 | FN = 4222 | TP = 3278  (Recall collapses from 74.96% to 43.71%)
+- QAT (INT8):       TN = 6430 | FP = 1070 | FN =  953 | TP = 6547  (Recall recovers to 87.29%, F1 = 0.8662)
+
+KEY SCIENTIFIC FINDINGS:
+1. PTQ Degradation: Direct 8-bit quantization without retraining causes severe accuracy drop
+   (85.90% -> 70.73%) and cuts true fault detection (Recall) by almost half (74.96% -> 43.71%).
+2. QAT Recovery: QAT fine-tuning allows the network to adapt to discrete rounding error,
+   recovering accuracy to 86.51% and boosting Recall to 87.29% (higher than FP32 baseline),
+   while compressing the model footprint by 75.0% (94.8 KB -> 23.7 KB).
 
 5. FPGA HARDWARE RESOURCE HIGHLIGHTS
 ----------------------------------------------------------------------------------------
 - Total Parameter Count:         23,713 parameters
 - Total MAC Operations:          537,632 MACs per 160-sample frame
-- Memory Reduction:              4.0x (75% savings) (94.8 KB -> 23.7 KB)
-- BRAM Utilization:              6 tiles (< 5% of Artix-7 100T)
-- Inference Latency (16 DSPs):   0.336 ms (Trip response in < 1 ms)
+- Memory Reduction:              4.0x (75.0% savings) (94.80 KB -> 23.70 KB)
+- BRAM Utilization:              6 tiles (< 5% of Artix-7 100T on-chip capacity)
+- Inference Latency (16 DSPs):   0.336 ms (Trip response in < 1 ms at 100 MHz clock)
 - On-Chip Storage Guarantee:     Model fits 100% inside on-chip BRAM with ZERO DDR overhead.
 
 6. CONCLUSION

@@ -186,47 +186,47 @@ def main():
     summary_rows = [
         {
             "Model": "Legacy Baseline",
-            "Accuracy (%)": metrics_legacy['accuracy'] * 100,
-            "F1-Score": metrics_legacy['f1'],
-            "Precision": metrics_legacy['precision'],
-            "Recall": metrics_legacy['recall'],
-            "False Alarm Rate (%)": metrics_legacy['false_alarm_rate'] * 100,
-            "ROC-AUC": metrics_legacy['roc_auc'],
+            "Accuracy (%)": round(metrics_legacy['accuracy'] * 100, 2),
+            "F1-Score": round(metrics_legacy['f1'], 4),
+            "Precision": round(metrics_legacy['precision'], 4),
+            "Recall": round(metrics_legacy['recall'], 4),
+            "False Alarm Rate (%)": round(metrics_legacy['false_alarm_rate'] * 100, 2),
+            "ROC-AUC": round(metrics_legacy['roc_auc'], 4),
             "Model Size (KB)": 82.5,
-            "Latency (ms)": metrics_legacy['latency_ms']
+            "Latency (ms)": round(metrics_legacy['latency_ms'], 4)
         },
         {
             "Model": "FP32 Baseline",
-            "Accuracy (%)": metrics_fp32['accuracy'] * 100,
-            "F1-Score": metrics_fp32['f1'],
-            "Precision": metrics_fp32['precision'],
-            "Recall": metrics_fp32['recall'],
-            "False Alarm Rate (%)": metrics_fp32['false_alarm_rate'] * 100,
-            "ROC-AUC": metrics_fp32['roc_auc'],
+            "Accuracy (%)": round(metrics_fp32['accuracy'] * 100, 2),
+            "F1-Score": round(metrics_fp32['f1'], 4),
+            "Precision": round(metrics_fp32['precision'], 4),
+            "Recall": round(metrics_fp32['recall'], 4),
+            "False Alarm Rate (%)": round(metrics_fp32['false_alarm_rate'] * 100, 2),
+            "ROC-AUC": round(metrics_fp32['roc_auc'], 4),
             "Model Size (KB)": 94.8,
-            "Latency (ms)": metrics_fp32['latency_ms']
+            "Latency (ms)": round(metrics_fp32['latency_ms'], 4)
         },
         {
             "Model": "PTQ (INT8)",
-            "Accuracy (%)": metrics_ptq['accuracy'] * 100,
-            "F1-Score": metrics_ptq['f1'],
-            "Precision": metrics_ptq['precision'],
-            "Recall": metrics_ptq['recall'],
-            "False Alarm Rate (%)": metrics_ptq['false_alarm_rate'] * 100,
-            "ROC-AUC": metrics_ptq['roc_auc'],
+            "Accuracy (%)": round(metrics_ptq['accuracy'] * 100, 2),
+            "F1-Score": round(metrics_ptq['f1'], 4),
+            "Precision": round(metrics_ptq['precision'], 4),
+            "Recall": round(metrics_ptq['recall'], 4),
+            "False Alarm Rate (%)": round(metrics_ptq['false_alarm_rate'] * 100, 2),
+            "ROC-AUC": round(metrics_ptq['roc_auc'], 4),
             "Model Size (KB)": 23.7,
-            "Latency (ms)": metrics_ptq['latency_ms']
+            "Latency (ms)": round(metrics_ptq['latency_ms'], 4)
         },
         {
             "Model": "QAT (INT8)",
-            "Accuracy (%)": metrics_qat['accuracy'] * 100,
-            "F1-Score": metrics_qat['f1'],
-            "Precision": metrics_qat['precision'],
-            "Recall": metrics_qat['recall'],
-            "False Alarm Rate (%)": metrics_qat['false_alarm_rate'] * 100,
-            "ROC-AUC": metrics_qat['roc_auc'],
+            "Accuracy (%)": round(metrics_qat['accuracy'] * 100, 2),
+            "F1-Score": round(metrics_qat['f1'], 4),
+            "Precision": round(metrics_qat['precision'], 4),
+            "Recall": round(metrics_qat['recall'], 4),
+            "False Alarm Rate (%)": round(metrics_qat['false_alarm_rate'] * 100, 2),
+            "ROC-AUC": round(metrics_qat['roc_auc'], 4),
             "Model Size (KB)": 23.7,
-            "Latency (ms)": metrics_qat['latency_ms']
+            "Latency (ms)": round(metrics_qat['latency_ms'], 4)
         }
     ]
     summary_df = pd.DataFrame(summary_rows)
@@ -278,7 +278,7 @@ def main():
         "accumulator_bits": 32
     }
 
-    generate_final_project_report(summary_df, fpga_analysis, hyperparams)
+    generate_final_project_report(summary_df, fpga_analysis, hyperparams, eval_dict)
 
     print("\n" + "=" * 70)
     print("  EXECUTION COMPLETE: ALL BENCHMARKS, REPORTS & PLOTS GENERATED  ")
@@ -288,7 +288,7 @@ def main():
     print(f"Hardware Export: {EXPORT_DIR}/")
     print(f"Academic Report: {os.path.join(RESULTS_DIR, 'final_academic_report.txt')}\n")
 
-def generate_final_project_report(summary_df, fpga_analysis, hp=None):
+def generate_final_project_report(summary_df, fpga_analysis, hp=None, eval_dict=None):
     report_file = os.path.join(RESULTS_DIR, "final_academic_report.txt")
     if hp is None:
         hp = {
@@ -383,16 +383,24 @@ def generate_final_project_report(summary_df, fpga_analysis, hp=None):
         f.write("  adapts the network weights to overcome quantization noise, fully recovering baseline accuracy\n")
         f.write("  while operating with an 8-bit integer budget.\n\n")
 
-        f.write("4. PERFORMANCE AND ACCURACY COMPARISON\n")
+        f.write("4. PERFORMANCE AND ACCURACY COMPARISON (ACTUAL EXPERIMENTAL TEST RESULTS)\n")
         f.write("-" * 88 + "\n")
         f.write(summary_df.to_string(index=False))
         f.write("\n\n")
+
+        if eval_dict is not None:
+            f.write("CONFUSION MATRIX BREAKDOWN (Test Set = 15,000 samples):\n")
+            f.write("-" * 88 + "\n")
+            for model_name, data in eval_dict.items():
+                m = data['metrics']
+                f.write(f"- {model_name:<18}: TN = {m['tn']:>5} | FP = {m['fp']:>5} | FN = {m['fn']:>5} | TP = {m['tp']:>5}\n")
+            f.write("\n")
 
         f.write("5. FPGA HARDWARE RESOURCE HIGHLIGHTS\n")
         f.write("-" * 88 + "\n")
         f.write(f"- Total Parameter Count:         {fpga_analysis['total_parameters']:,} parameters\n")
         f.write(f"- Total MAC Operations:          {fpga_analysis['total_macs']:,} MACs per 160-sample frame\n")
-        f.write(f"- Memory Reduction:              {fpga_analysis['compression_ratio']} (94.8 KB -> 23.7 KB)\n")
+        f.write(f"- Memory Reduction:              {fpga_analysis['compression_ratio']} (94.80 KB -> 23.70 KB)\n")
         f.write(f"- BRAM Utilization:              {fpga_analysis['bram_36kb_tiles']} tiles (< 5% of Artix-7 100T)\n")
         f.write(f"- Inference Latency (16 DSPs):   {fpga_analysis['latency_16dsp_ms']:.3f} ms (Trip response in < 1 ms)\n")
         f.write("- On-Chip Storage Guarantee:     Model fits 100% inside on-chip BRAM with ZERO DDR overhead.\n\n")

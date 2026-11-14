@@ -169,12 +169,12 @@ python main.py --quick
 
 | Metric | Legacy Baseline | FP32 Baseline | PTQ (INT8) | QAT (INT8) |
 | :--- | :---: | :---: | :---: | :---: |
-| Classification Accuracy | 88.42% | 98.76% | 93.20% | **98.54%** |
-| F1-Score | 0.8791 | 0.9875 | 0.9304 | **0.9853** |
-| Precision | 0.8912 | 0.9890 | 0.9421 | **0.9872** |
-| Recall (Sensitivity) | 0.8674 | 0.9860 | 0.9190 | **0.9835** |
-| False Alarm Rate (FAR) | 9.85% | 1.08% | 5.42% | **1.21%** |
-| ROC-AUC Score | 0.9412 | 0.9984 | 0.9781 | **0.9980** |
+| Classification Accuracy | 50.00% | 85.90% | 70.73% | **86.51%** |
+| F1-Score | 0.0000 | 0.8417 | 0.5989 | **0.8662** |
+| Precision | 0.0000 | 0.9595 | 0.9512 | **0.8595** |
+| Recall (Sensitivity) | 0.0000 | 0.7496 | 0.4371 | **0.8729** |
+| False Alarm Rate (FAR) | 0.00% | 3.16% | 2.24% | **14.27%** |
+| ROC-AUC Score | 0.4629 | 0.9462 | 0.8623 | **0.9426** |
 | Model Footprint | 82.5 KB | 94.8 KB | 23.7 KB | **23.7 KB** |
 | Memory Savings | Baseline | Baseline | 75.0% | **75.0%** |
 | On-Chip BRAM Fit | Partial | Partial | 100% | **100%** |
