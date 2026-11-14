@@ -1,0 +1,41 @@
+========================================================================
+          FPGA HARDWARE RESOURCE & IMPLEMENTATION ESTIMATION
+        Final Year B.Tech Project: Arc Fault Detection with QAT
+========================================================================
+
+Target FPGA Chip:          Xilinx Artix-7 (XC7A100T-1CSG324C)
+System Clock Frequency:    100.0 MHz (Clock Period = 10.0 ns)
+Arithmetic Precision:      INT8 (-128 to 127) (Weights)
+Accumulator Width:         32-bit integer (eliminates intermediate overflow)
+
+1. LAYER-BY-LAYER COMPUTATIONAL COMPLEXITY:
+------------------------------------------------------------------------
+Layer Name                   | Params   | MAC Operations | Output Dim
+------------------------------------------------------------------------
+conv1 (Conv1d 1->16, k=5)    | 96       | 25600          | 16x160
+conv2 (Conv1d 16->32, k=3)   | 1568     | 245760         | 32x80
+conv3 (Conv1d 32->32, k=3)   | 3104     | 245760         | 32x20
+fc1 (Linear 640->32)         | 20512    | 20480          | 32
+fc2 (Linear 32->1)           | 33       | 32             | 1
+------------------------------------------------------------------------
+TOTAL                        | 25313    | 537632         |
+
+2. MEMORY AND STORAGE FOOTPRINT COMPARISON:
+------------------------------------------------------------------------
+- Baseline FP32 Model Size:      98.88 KB
+- Quantized INT8 Model Size:     24.72 KB
+- On-Chip Memory Reduction:      4.0x (75% savings)
+- Required 36Kb BRAM Blocks:     6 tiles
+- Target BRAM Utilization:       4.44% of Artix-7 100T
+  Note: Model fits entirely in on-chip Block RAM without external DRAM traffic.
+
+3. ESTIMATED INFERENCE LATENCY & THROUGHPUT:
+------------------------------------------------------------------------
+- 1 DSP Slice (Sequential):      5.376 ms / frame  (186.0 frames/sec)
+- 16 DSP Slices (Parallel):      0.336 ms / frame (2976.0 frames/sec)
+- 32 DSP Slices (Pipelined):     0.168 ms / frame (5952.0 frames/sec)
+
+Power line cycle duration at 50 Hz is 20.0 ms.
+The 16-DSP architecture executes inference in ~0.33 ms, achieving >60x real-time
+decision speed, providing instantaneous circuit breaker trip response!
+========================================================================
