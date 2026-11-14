@@ -181,14 +181,3 @@ python main.py --quick
 | Hardware Latency (16 DSPs)| - | - | 0.336 ms | **0.336 ms** |
 
 ---
-
-## 8. Viva & Examination Defense Guide
-
-### Question 1: Why does Post-Training Quantization degrade accuracy, and how does QAT solve this?
-- **Answer**: In PTQ, rounding continuous weights to the nearest integer grid points introduces quantization error ($e = W - Q(W)$). Across stacked convolutional and dense layers, these rounding errors compound, altering decision boundaries and elevating the False Alarm Rate. QAT solves this by inserting Straight-Through Estimators (STE) into the forward computational graph during training. While weights are stored in floating point, activations and operations use simulated 8-bit arithmetic. As backpropagation occurs, gradients update the underlying weights to find minima that are naturally robust to integer grid truncation.
-
-### Question 2: Why is the False Alarm Rate (FAR) critical in power system protection?
-- **Answer**: In electrical circuit breaker applications, a high False Alarm Rate leads to "nuisance tripping"—unwarranted interruption of power to critical infrastructure, data centers, and industrial loads. While high sensitivity (Recall) ensures arc suppression, a low FAR ensures supply continuity. QAT reduces FAR from 5.42% (in PTQ) down to 1.21%, matching the reliability of the 32-bit floating point model.
-
-### Question 3: How does the model fit into the FPGA memory hierarchy?
-- **Answer**: FPGAs have three primary memory tiers: external DDR DRAM, on-chip Block RAM (BRAM), and distributed LUT RAM. Accessing off-chip DDR DRAM introduces non-deterministic memory latencies (often 50-100 clock cycles per access) and memory bus contention. Because our INT8 model is compressed to 23.7 KB, all layer weights and scaling factors fit completely inside 6 tiles of on-chip 36Kb BRAM. During inference, weights are read with single-cycle latency, guaranteeing real-time, deterministic execution.
