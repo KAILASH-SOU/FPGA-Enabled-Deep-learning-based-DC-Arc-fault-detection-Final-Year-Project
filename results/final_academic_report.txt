@@ -90,7 +90,6 @@ and Quantization-Aware Training (QAT) targeted at Xilinx Artix-7 / Zynq-7000 FPG
 Evaluated on 15,000 unseen test samples (7,500 Normal, 7,500 Arc Fault):
 
           Model  Accuracy (%)  F1-Score  Precision   Recall  False Alarm Rate (%)   ROC-AUC  Model Size (KB)  Latency (ms)
-Legacy Baseline        50.00%    0.0000     0.0000   0.0000                 0.00%    0.4629            82.50        0.1674
   FP32 Baseline        85.90%    0.8417     0.9595   0.7496                 3.16%    0.9462            94.80        0.1240
      PTQ (INT8)        70.73%    0.5989     0.9512   0.4371                 2.24%    0.8623            23.70        0.1155
      QAT (INT8)        86.51%    0.8662     0.8595   0.8729                14.27%    0.9426            23.70        0.1650
