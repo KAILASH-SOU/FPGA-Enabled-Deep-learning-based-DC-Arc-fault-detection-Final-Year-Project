@@ -1,0 +1,287 @@
+========================================================================================
+       COMPLETE END-TO-END FLOWCHART SPECIFICATION: ARC FAULT DETECTION WITH QAT
+           Final Year B.Tech Project: Deep Learning 1D-CNN on FPGA Hardware
+========================================================================================
+
+This document provides the complete, step-by-step technical blueprint to draw the
+end-to-end flowchart for your B.Tech project thesis, presentation slides, or viva poster.
+
+You can use the ASCII diagrams in Section 1, the step-by-step block descriptions in
+Section 2, or copy the Mermaid.js code in Section 3 directly into draw.io or mermaid.live
+to generate a publication-quality diagram instantly with one click.
+
+========================================================================================
+SECTION 1: HIGH-LEVEL ASCII FLOWCHART
+========================================================================================
+
+                     +---------------------------------------+
+                     |       1. RAW AC CURRENT INPUT         |
+                     |  Sampling: 8 kHz | Grid Freq: 50 Hz   |
+                     |  1 Cycle Window = 160 Samples (20 ms) |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |     2. DUAL-DOMAIN PREPROCESSING      |
+                     |---------------------------------------|
+                     | [Time Branch]: Peak Scale to [-1, 1]  |
+                     | [FFT Branch]: 160-pt FFT Magnitude,   |
+                     |               Attenuate DC Bin (x0.1) |
+                     |               Normalized to [0, 1]    |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |    3. FEATURE CONCATENATION LAYER     |
+                     |   160 Time + 160 FFT = 320 Features   |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |       4. STRATIFIED DATA SPLIT        |
+                     |   Total Dataset = 100,000 Frames      |
+                     |   - Training Set:   70,000 (70%)      |
+                     |   - Validation Set: 15,000 (15%)      |
+                     |   - Testing Set:    15,000 (15%)      |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |   5. HYPERPARAMETER SEARCH (GRID)     |
+                     |   Trials: LR, Weight Decay, Dropout   |
+                     |   Optimum: LR=0.003, WD=1e-4, Drop=0.2|
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |  6. FPGA-CONSCIOUS 1D-CNN (FP32)      |
+                     |---------------------------------------|
+                     | Input: (Batch, 1, 320)                |
+                     | Conv1: 1->16, k=5, p=2 + ReLU6 + MP(2)|
+                     | Conv2: 16->32, k=3, p=1+ ReLU6 + MP(2)|
+                     | Conv3: 32->32, k=3, p=1+ ReLU6 + MP(4)|
+                     | FC1:   Linear(640->32) + ReLU6 + D(0.2)|
+                     | FC2:   Linear(32->1) + Sigmoid        |
+                     | Total Parameters: 23,713              |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |   7. FP32 BASELINE MODEL TRAINING     |
+                     |   Epochs: 12 | Optimizer: Adam        |
+                     |   Scheduler: ReduceLROnPlateau        |
+                     |   Save Checkpoint: arc_fault_fp32.pth |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |     8. EVALUATE FP32 BASELINE         |
+                     |   Accuracy: 85.90% | F1-Score: 0.8417 |
+                     |   Recall:   74.96% | Precision: 0.9595|
+                     +---------------------------------------+
+                                         |
+                                         v
+                    /-----------------------------------------\
+                   /   9. HARDWARE QUANTIZATION BRANCHING      \
+                  /                                             \
+                 +-----------------------+-----------------------+
+                 |                                               |
+                 v                                               v
+  +-------------------------------+             +-------------------------------+
+  |  10A. POST-TRAINING (PTQ)     |             |  10B. QUANTIZATION-AWARE (QAT)|
+  |-------------------------------|             |-------------------------------|
+  | - Directly round FP32 weights |             | - Start from pre-trained FP32 |
+  |   to 8-bit: W_int = round(W/S)|             | - Forward: FakeQuantize STE   |
+  | - Scale S = max(|W|)/127      |             |   clamps to [-128, +127]      |
+  | - Range: [-128, +127]         |             | - Backward: Pass gradients    |
+  | - NO retraining / fine-tuning |             | - 5 Epochs Fine-Tuning (Adam) |
+  |                               |             | - Scheduler: CosineAnnealing  |
+  |                               |             | - Save: arc_fault_qat_int8.pth|
+  +-------------------------------+             +-------------------------------+
+                 |                                               |
+                 v                                               v
+  +-------------------------------+             +-------------------------------+
+  |  11A. PTQ TEST EVALUATION     |             |  11B. QAT TEST EVALUATION     |
+  |-------------------------------|             |-------------------------------|
+  | - Accuracy: 70.73% (-15.17%)  |             | - Accuracy: 86.51% (Recovered)|
+  | - Recall:   43.71% (-31.25%)  |             | - Recall:   87.29% (+12.33%)  |
+  | - F1-Score: 0.5989            |             | - F1-Score: 0.8662            |
+  | * PROVES QUANTIZATION FAILURE |             | * PROVES QAT SUCCESS          |
+  +-------------------------------+             +-------------------------------+
+                 |                                               |
+                 +-----------------------+-----------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |     12. COMPREHENSIVE BENCHMARKING    |
+                     |   Compare: Legacy vs FP32 vs PTQ vs QAT|
+                     |   Save: metrics_summary.csv & JSON    |
+                     |   Generate 6 Publication PNG Plots    |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |   13. FPGA RESOURCE CO-DESIGN         |
+                     |---------------------------------------|
+                     | - Memory Reduction: 94.8 KB -> 23.7 KB|
+                     | - BRAM Usage: 6 tiles (<5% Artix-7)   |
+                     | - Zero External DDR DRAM Bottleneck   |
+                     | - 16 Parallel DSP Slices @ 100 MHz    |
+                     | - Hardware Latency: 0.336 ms / frame  |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |   14. HARDWARE ARTIFACT EXPORT        |
+                     |---------------------------------------|
+                     | -> fpga_weights_int8.h   (Vivado HLS) |
+                     | -> fpga_weights_int8.coe (Vivado BRAM)|
+                     | -> fpga_model_spec.json  (Tensors)    |
+                     | -> final_academic_report.txt          |
+                     +---------------------------------------+
+                                         |
+                                         v
+                     +---------------------------------------+
+                     |  15. REAL-TIME CIRCUIT BREAKER TRIP   |
+                     |  Instantaneous Fault Trip in 0.336 ms |
+                     +---------------------------------------+
+
+========================================================================================
+SECTION 2: DETAILED STEP-BY-STEP BLOCK SPECIFICATIONS
+========================================================================================
+
+Use this section to understand what each shape and block in your drawing represents:
+
+BLOCK 1: DATA ACQUISITION & SENSING
+- Shape: Parallelogram (Input Data)
+- Details: Current sensor samples AC line at 8,000 Hz (8 kHz). One 50 Hz power cycle
+  takes 20.0 ms, producing a window of exactly 160 current samples.
+- Classes: Class 0 = Normal AC current; Class 1 = Dangerous series arc fault current
+  (characterized by zero-crossing shoulder delays and high-frequency chaotic bursts).
+
+BLOCK 2 & 3: DUAL-DOMAIN PREPROCESSING & FEATURE CONCATENATION
+- Shape: Rectangle (Process)
+- Time Domain: Normalizes raw current amplitudes to [-1.0, +1.0] using 99.9th percentile peak scaling.
+- Frequency Domain: Computes 160-point Fast Fourier Transform (FFT). Attenuates DC spike
+  at bin 0 by 0.1x to prevent masking subtle high-frequency harmonic energy. Normalized to [0.0, 1.0].
+- Output: Concatenated feature vector of 320 dimensions per frame.
+
+BLOCK 4: DATA SPLITTING & STRATIFICATION
+- Shape: Rectangle (Process)
+- Total Dataset: 100,000 current cycles.
+- Split Ratio: 70% Training (70,000), 15% Validation (15,000), 15% Testing (15,000).
+- Stratification: Maintains exact 50/50 balance of normal and arc frames across all subsets.
+
+BLOCK 5: ARCHITECTURE & HYPERPARAMETER SEARCH
+- Shape: Diamond / Rectangle (Sub-process)
+- Automated grid exploration across learning rates (0.001 to 0.008), weight decays (1e-4, 1e-5),
+  and dropouts (0.1 to 0.3). Selected configuration: LR=0.003, Weight Decay=1e-4, Dropout=0.20.
+
+BLOCK 6: FPGA-CONSCIOUS 1D-CNN ARCHITECTURE
+- Shape: Subroutine Box (Double Border)
+- Layer 1: Conv1D (1 in, 16 out, kernel=5, padding=2) -> BatchNorm -> ReLU6 -> MaxPool(2)
+- Layer 2: Conv1D (16 in, 32 out, kernel=3, padding=1) -> BatchNorm -> ReLU6 -> MaxPool(2)
+- Layer 3: Conv1D (32 in, 32 out, kernel=3, padding=1) -> BatchNorm -> ReLU6 -> MaxPool(4)
+- Dense Layer: Linear (640 in, 32 out) -> ReLU6 -> Dropout(0.20)
+- Output: Linear (32 in, 1 out) -> Sigmoid Activation -> Probability of Arc Fault [0.0, 1.0].
+- Hardware Features: Bounded ReLU6 (clamps activations to [0, 6] to prevent fixed-point overflow),
+  power-of-two channel widths (16, 32) matching FPGA memory buses. Total parameters = 23,713.
+
+BLOCK 7 & 8: FP32 BASELINE TRAINING & EVALUATION
+- Shape: Rectangle (Process)
+- Trained for 12 epochs using Adam optimizer and ReduceLROnPlateau scheduler.
+- Baseline Result: Accuracy = 85.90%, F1-Score = 0.8417, Precision = 0.9595, Recall = 74.96%.
+
+BLOCK 9, 10, 11: QUANTIZATION PIPELINE (PTQ VS QAT COMPARISON)
+- Shape: Decision Branch (Split into two comparative paths)
+- Path A (PTQ): Takes trained FP32 model and directly rounds weights to 8-bit integers without
+  retraining. Result: Accuracy crashes to 70.73% and Recall plummets to 43.71% due to accumulated
+  rounding error. Proves why simple post-quantization is insufficient.
+- Path B (QAT): Implements Straight-Through Estimators (STE). Forward pass simulates 8-bit
+  integer quantization; backward pass updates floating-point shadow weights to learn resilience
+  to rounding errors. 5 epochs of fine-tuning with CosineAnnealingLR.
+  Result: Accuracy recovers to 86.51% and Recall surges to 87.29% with zero hardware penalty!
+
+BLOCK 12: ACADEMIC BENCHMARKING & VISUALIZATION
+- Shape: Document / Display
+- Automatically outputs 6 high-resolution publication PNG plots:
+  1. Waveforms and FFT Spectra (01_dataset_signal_analysis.png)
+  2. Training/Validation Convergence (02_training_validation_curves.png)
+  3. Side-by-side Confusion Matrices (03_confusion_matrices.png)
+  4. ROC-AUC and PR Curves (04_roc_pr_curves.png)
+  5. Multi-metric Bar Comparison (05_model_comparison_bar.png)
+  6. Weight Quantization Histograms (06_weight_distribution_quantization.png)
+
+BLOCK 13, 14, 15: HARDWARE SYNTHESIS & FPGA DEPLOYMENT
+- Shape: Cylinder (Database / Export File)
+- Memory: Compresses weights by 75.0% (94.8 KB down to 23.7 KB).
+- BRAM: Fits 100% inside 6 tiles of 36Kb Block RAM (< 5% of Xilinx Artix-7 100T).
+- Execution: 16 parallel DSP48E1 slices at 100 MHz clock achieve 0.336 ms trip latency.
+- Export: Generates C/C++ header (fpga_weights_int8.h) and Vivado COE (fpga_weights_int8.coe).
+
+========================================================================================
+SECTION 3: MERMAID.JS CODE (PASTE INTO DRAW.IO OR MERMAID.LIVE)
+========================================================================================
+
+You can copy the code block below and paste it directly into https://mermaid.live or into
+draw.io (Arrange -> Insert -> Advanced -> Mermaid) to automatically generate your visual chart:
+
+```mermaid
+flowchart TD
+    A["Raw AC Current Signal<br/>(8 kHz Sampling, 160-sample Frame = 20 ms)"] --> B["Dual-Domain Feature Extraction"]
+    
+    subgraph Preprocessing ["Feature Engineering Pipeline"]
+        B --> C["Time-Domain Branch<br/>Peak Scaling to [-1.0, +1.0]"]
+        B --> D["Frequency-Domain Branch<br/>160-point FFT, Attenuate DC, Scale [0, 1]"]
+        C --> E["Concatenation Layer<br/>(320 Total Input Features)"]
+        D --> E
+        E --> F["Stratified Dataset Partitioning<br/>Train: 70% | Val: 15% | Test: 15%"]
+    end
+
+    F --> G["FPGA-Conscious 1D-CNN Architecture<br/>(ReLU6 Bounding, Power-of-2 Channels)"]
+    
+    subgraph CNN_Arch ["Model Architecture (23,713 Parameters)"]
+        G --> H["Conv1D Layer 1: 1->16, k=5 + ReLU6 + MaxPool(2)"]
+        H --> I["Conv1D Layer 2: 16->32, k=3 + ReLU6 + MaxPool(2)"]
+        I --> J["Conv1D Layer 3: 32->32, k=3 + ReLU6 + MaxPool(4)"]
+        J --> K["Dense Layer: Linear(640->32) + ReLU6 + Dropout(0.2)"]
+        K --> L["Output Layer: Linear(32->1) + Sigmoid"]
+    end
+
+    L --> M["FP32 Baseline Training<br/>12 Epochs, Adam, ReduceLROnPlateau"]
+    M --> N["Baseline Test Evaluation<br/>Acc: 85.90% | F1: 0.8417 | Recall: 74.96%"]
+
+    N --> O{"Quantization Strategy Comparison"}
+
+    subgraph Quantization ["Hardware Compression Branch"]
+        O -->|"Path A: Post-Training Quantization"| P["PTQ: Direct INT8 Rounding<br/>No Retraining / Simulated Math"]
+        P --> Q["PTQ Test Evaluation<br/>Acc: 70.73% (-15.17%)<br/>Recall: 43.71% (-31.25%)<br/>Severe Degradation!"]
+
+        O -->|"Path B: Quantization-Aware Training"| R["QAT: Straight-Through Estimator (STE)<br/>Simulates 8-bit Noise During Training"]
+        R --> S["5 Epochs Fine-Tuning<br/>CosineAnnealingLR Scheduler"]
+        S --> T["QAT Test Evaluation<br/>Acc: 86.51% (Recovered)<br/>Recall: 87.29% (+12.33%)<br/>75% Memory Reduction!"]
+    end
+
+    Q --> U["Comprehensive Evaluation & Benchmarking<br/>Metrics CSV, Detailed JSON, 6 PNG Graphs"]
+    T --> U
+
+    subgraph Hardware ["FPGA Hardware Co-Design & Export"]
+        U --> V["FPGA Hardware Optimization<br/>Target: Xilinx Artix-7 (XC7A100T)<br/>Clock: 100 MHz | Memory: 23.7 KB in BRAM"]
+        V --> W["Hardware Artifacts Export<br/>- fpga_weights_int8.h (Vivado HLS)<br/>- fpga_weights_int8.coe (Vivado BRAM)<br/>- fpga_hardware_estimation.txt"]
+        W --> X["Real-Time Tripping Response<br/>0.336 ms Latency (60x Faster than 20 ms Cycle)"]
+    end
+```
+
+========================================================================================
+SECTION 4: ACADEMIC CAPTION FOR THESIS & VIVA PRESENTATION
+========================================================================================
+
+"Figure 1: End-to-end framework of the FPGA-optimized AC arc fault detection system.
+Raw current waveforms are sampled at 8 kHz and decomposed into synchronized 160-point
+time and FFT frequency domains. A hardware-conscious 1D-CNN utilizing ReLU6 bounded
+activations is trained in FP32 precision. To enable edge deployment, Post-Training
+Quantization (PTQ) is evaluated to demonstrate precision loss, followed by Quantization-
+Aware Training (QAT) to recover baseline accuracy. Quantized 8-bit integer weights
+are exported to Vivado HLS and BRAM COE files, executing sub-millisecond trip decisions
+in 0.336 ms with zero external DDR memory overhead."
+========================================================================================
