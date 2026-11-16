@@ -272,16 +272,4 @@ flowchart TD
     end
 ```
 
-========================================================================================
-SECTION 4: ACADEMIC CAPTION FOR THESIS & VIVA PRESENTATION
-========================================================================================
 
-"Figure 1: End-to-end framework of the FPGA-optimized AC arc fault detection system.
-Raw current waveforms are sampled at 8 kHz and decomposed into synchronized 160-point
-time and FFT frequency domains. A hardware-conscious 1D-CNN utilizing ReLU6 bounded
-activations is trained in FP32 precision. To enable edge deployment, Post-Training
-Quantization (PTQ) is evaluated to demonstrate precision loss, followed by Quantization-
-Aware Training (QAT) to recover baseline accuracy. Quantized 8-bit integer weights
-are exported to Vivado HLS and BRAM COE files, executing sub-millisecond trip decisions
-in 0.336 ms with zero external DDR memory overhead."
-========================================================================================
